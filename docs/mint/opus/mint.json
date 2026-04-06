@@ -1,0 +1,37 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "OpenClaw Developer Guide",
+  "colors": {
+    "primary": "#FF5A36",
+    "dark": "#FF5A36",
+    "light": "#FF8A6B"
+  },
+  "favicon": "/assets/pixel-lobster.svg",
+  "navigation": [
+    {
+      "group": "Getting Started",
+      "pages": ["introduction", "architecture", "project-structure"]
+    },
+    {
+      "group": "Core Concepts",
+      "pages": [
+        "gateway",
+        "channels",
+        "agents",
+        "memory",
+        "session",
+        "multi-agent",
+        "node-architecture",
+        "android-node",
+        "macos-node",
+        "canvas",
+        "config-system",
+        "plugin-system"
+      ]
+    },
+    {
+      "group": "Development",
+      "pages": ["dev-setup", "code-patterns", "testing", "contributing"]
+    }
+  ]
+}

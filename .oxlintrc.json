@@ -23,6 +23,7 @@
     "unicorn/require-post-message-target-origin": "off"
   },
   "ignorePatterns": [
+    "apps/electron-node/",
     "assets/",
     "dist/",
     "docs/_layouts/",

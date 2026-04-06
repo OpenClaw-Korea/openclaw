@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenClaw Node — 설정</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      padding: 24px;
+      -webkit-app-region: drag;
+      user-select: none;
+    }
+    h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #fff;
+    }
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: #16213e;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-dot.disconnected { background: #e74c3c; }
+    .status-dot.connecting { background: #f39c12; animation: pulse 1s infinite; }
+    .status-dot.pairing { background: #f39c12; animation: pulse 1s infinite; }
+    .status-dot.connected { background: #2ecc71; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .status-text { font-size: 13px; }
+    .form-group {
+      margin-bottom: 14px;
+      -webkit-app-region: no-drag;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      color: #aaa;
+      margin-bottom: 4px;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 8px 12px;
+      background: #16213e;
+      border: 1px solid #2a2a4a;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+    }
+    input:focus {
+      border-color: #4a90d9;
+    }
+    .row {
+      display: flex;
+      gap: 12px;
+    }
+    .row .form-group { flex: 1; }
+    .row .form-group.small { flex: 0 0 100px; }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      -webkit-app-region: no-drag;
+    }
+    .checkbox-group input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+    }
+    .checkbox-group label {
+      margin-bottom: 0;
+      font-size: 13px;
+      color: #e0e0e0;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+      -webkit-app-region: no-drag;
+    }
+    button {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    button.primary {
+      background: #4a90d9;
+      color: #fff;
+    }
+    button.primary:hover { background: #3a7bc8; }
+    button.secondary {
+      background: #2a2a4a;
+      color: #e0e0e0;
+    }
+    button.secondary:hover { background: #3a3a5a; }
+    .node-id {
+      font-size: 11px;
+      color: #666;
+      margin-top: 16px;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <h1>OpenClaw Node 설정</h1>
+
+  <div class="status-bar">
+    <div id="statusDot" class="status-dot disconnected"></div>
+    <span id="statusText" class="status-text">연결 끊김</span>
+  </div>
+
+  <div class="row">
+    <div class="form-group">
+      <label>Gateway 주소</label>
+      <input type="text" id="host" placeholder="127.0.0.1">
+    </div>
+    <div class="form-group small">
+      <label>포트</label>
+      <input type="number" id="port" placeholder="18789">
+    </div>
+  </div>
+
+  <div class="checkbox-group">
+    <input type="checkbox" id="tls">
+    <label for="tls">TLS (wss://) 사용</label>
+  </div>
+
+  <div class="form-group" id="fingerprintGroup" style="display:none;">
+    <label>TLS Fingerprint (선택)</label>
+    <input type="text" id="tlsFingerprint" placeholder="SHA256 fingerprint">
+  </div>
+
+  <div class="actions">
+    <button class="primary" id="saveBtn">저장 및 연결</button>
+    <button class="secondary" id="reconnectBtn">재연결</button>
+  </div>
+
+  <div class="node-id" id="nodeId"></div>
+
+  <script src="../renderer/app.js"></script>
+</body>
+</html>

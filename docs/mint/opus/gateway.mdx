@@ -1,0 +1,138 @@
+---
+title: "Gateway 시스템 가이드"
+description: "OpenClaw의 핵심 HTTP/WebSocket 서버인 Gateway의 구조, 생명주기, 설정 방법을 설명합니다."
+---
+
+## Gateway란 무엇인가
+
+Gateway는 OpenClaw 플랫폼의 중심 서버입니다. Express 5 기반의 HTTP/WebSocket 서버로,
+모든 채널(Telegram, Discord, Slack 등)과 에이전트 사이의 통신을 중계합니다.
+Gateway가 없으면 메시지를 수신하거나 AI 응답을 전달할 수 없습니다.
+
+소스 코드는 `src/gateway/` 디렉토리에 위치하며, 서버 구동부터 설정 리로드, WebSocket 스트리밍,
+헬스 체크까지 모든 핵심 기능을 담당합니다.
+
+## 주요 파일 구조
+
+| 파일               | 역할                                                                                           |
+| ------------------ | ---------------------------------------------------------------------------------------------- |
+| `server.impl.ts`   | Gateway 서버의 핵심 구현부. 서버 시작, 채널 매니저, 플러그인 로딩, WebSocket 핸들러 등록       |
+| `client.ts`        | Gateway 클라이언트 API. WebSocket 프로토콜을 통해 Gateway에 접속하는 클라이언트 구현 (441 LOC) |
+| `config-reload.ts` | 런타임 중 설정 파일 변경 감지 및 동적 리로드                                                   |
+| `control-ui.ts`    | 관리자 웹 UI 서빙 및 상태 관리                                                                 |
+| `hooks.ts`         | 외부 웹훅 수신 및 라우팅. 매핑 규칙에 따라 에이전트로 메시지 전달                              |
+| `boot.ts`          | Gateway 시작 시 `BOOT.md` 파일을 읽어 초기 에이전트 명령 실행                                  |
+| `ws-log.ts`        | WebSocket 메시지 로깅                                                                          |
+
+## Gateway 시작 흐름
+
+Gateway가 시작되면 다음 순서로 초기화가 진행됩니다.
+
+<Steps>
+  <Step title="설정 파일 로드">
+    `loadConfig()`를 호출하여 YAML/JSON 설정 파일을 읽고 Zod 스키마로 검증합니다. 레거시 설정이
+    있으면 `migrateLegacyConfig()`로 자동 마이그레이션합니다.
+  </Step>
+  <Step title="플러그인 로드">
+    `loadGatewayPlugins()`로 모든 플러그인을 검색하고 로드합니다. `jiti`를 사용한 동적 모듈 로딩으로
+    TypeScript 플러그인을 직접 실행합니다.
+  </Step>
+  <Step title="채널 매니저 생성">
+    `createChannelManager()`로 활성화된 채널들의 어댑터를 초기화합니다. Telegram, Discord, WhatsApp
+    등 각 채널의 연결 상태를 관리합니다.
+  </Step>
+  <Step title="WebSocket 핸들러 등록">
+    `attachGatewayWsHandlers()`로 WebSocket 엔드포인트를 설정합니다. CLI 노드, 모바일 앱, 브라우저
+    등 다양한 클라이언트가 접속할 수 있습니다.
+  </Step>
+  <Step title="헬스 체크 및 Heartbeat 시작">
+    `startHeartbeatRunner()`와 `refreshGatewayHealthSnapshot()`로 서버 상태를 주기적으로 갱신합니다.
+  </Step>
+  <Step title="서버 바인딩 및 리스닝">
+    설정된 포트(기본 18789)에 HTTP 서버를 바인딩하고 요청 수신을 시작합니다. TLS가 설정된 경우
+    `loadGatewayTlsRuntime()`으로 인증서를 로드합니다.
+  </Step>
+  <Step title="Boot 스크립트 실행">
+    `runBootOnce()`로 워크스페이스의 `BOOT.md` 파일이 있으면 해당 내용을 에이전트에 전달합니다.
+  </Step>
+</Steps>
+
+## 설정 구조
+
+Gateway 설정은 OpenClaw 전역 설정 파일의 일부로 관리됩니다.
+
+```yaml
+# config.yaml 예시
+gateway:
+  port: 18789
+  host: "127.0.0.1"
+  password: "your-secret-password"
+
+hooks:
+  enabled: true
+  token: "webhook-token"
+  path: "/hooks"
+  maxBodyBytes: 262144
+```
+
+`hooks` 섹션은 외부 서비스가 Gateway로 메시지를 보낼 수 있게 합니다.
+`hooks.token`은 필수이며, 인증 없이는 웹훅을 수신하지 않습니다.
+
+## WebSocket 프로토콜
+
+Gateway 클라이언트는 WebSocket을 통해 서버와 통신합니다.
+`client.ts`에 정의된 프로토콜은 다음 구조를 따릅니다.
+
+```typescript
+// 접속 파라미터
+type GatewayClientOptions = {
+  url?: string; // ws://127.0.0.1:18789
+  token?: string; // 인증 토큰
+  password?: string; // 서버 비밀번호
+  clientName?: string; // 클라이언트 식별자
+  mode?: string; // "control" | "node" | "readonly"
+  scopes?: string[]; // 권한 범위
+  caps?: string[]; // 지원 기능 목록
+};
+```
+
+프로토콜은 `RequestFrame`, `ResponseFrame`, `EventFrame` 세 가지 프레임 타입을 사용합니다.
+`PROTOCOL_VERSION`으로 버전 호환성을 관리하며, 클라이언트와 서버 간
+최소/최대 프로토콜 버전 협상이 이루어집니다.
+
+## 헬스 체크
+
+Gateway는 내장 헬스 체크 시스템을 제공합니다.
+
+- `getHealthCache()` -- 현재 서버 상태 스냅샷 반환
+- `getHealthVersion()` -- 헬스 상태 버전 번호 (변경 감지용)
+- `getPresenceVersion()` -- 접속 노드 변경 추적
+- `refreshGatewayHealthSnapshot()` -- 헬스 정보 갱신
+
+Heartbeat는 연결된 모든 채널과 노드의 상태를 주기적으로 확인합니다.
+이상 감지 시 로그를 남기고 관리자에게 알림을 보낼 수 있습니다.
+
+## 보안 모델
+
+Gateway의 보안은 여러 계층으로 구성됩니다.
+
+- **인증**: 비밀번호 또는 디바이스 인증 (`device-auth.ts`). 공개키 기반 디바이스 식별 지원
+- **TLS**: 선택적 TLS 지원으로 통신 암호화 (`server/tls.ts`)
+- **웹훅 토큰**: 외부 웹훅은 반드시 `hooks.token`으로 인증
+- **실행 승인**: `ExecApprovalManager`를 통해 에이전트의 위험 명령 실행을 사용자가 승인
+- **에이전트 격리**: 에이전트별로 허용되는 도구와 권한이 독립적으로 관리
+
+## 설정 리로드
+
+Gateway는 서버를 재시작하지 않고도 설정을 동적으로 리로드할 수 있습니다.
+
+`startGatewayConfigReloader()`가 설정 파일의 변경을 감시합니다.
+변경이 감지되면 새 설정을 검증한 후, 채널 매니저와 에이전트 설정을 업데이트합니다.
+실패 시 이전 설정을 유지하여 서비스 중단을 방지합니다.
+
+## 핵심 요약
+
+Gateway는 OpenClaw의 모든 것을 연결하는 허브입니다.
+채널로부터 메시지를 수신하고, 에이전트에 전달하며, 응답을 다시 채널로 보냅니다.
+WebSocket 프로토콜로 실시간 스트리밍을 지원하고,
+동적 설정 리로드로 무중단 운영이 가능합니다.

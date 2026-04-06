@@ -1,0 +1,320 @@
+---
+title: "Plugin 시스템 가이드"
+description: "OpenClaw의 플러그인 아키텍처, 확장 모듈 개발 방법, 플러그인 생명주기를 설명합니다."
+---
+
+## Plugin 시스템 개요
+
+OpenClaw는 플러그인 기반 아키텍처로 설계되었습니다.
+핵심 기능 외의 모든 확장은 플러그인으로 구현됩니다.
+채널 어댑터, 인증 프로바이더, 메모리 백엔드 등이 모두 플러그인입니다.
+
+현재 `extensions/` 디렉토리에 35개의 확장 모듈이 있고,
+`skills/` 디렉토리에 52개의 스킬이 포함되어 있습니다.
+
+## 플러그인 아키텍처
+
+### 핵심 디렉토리
+
+```
+src/plugins/          # 플러그인 코어 (37개 파일)
+  loader.ts           # 플러그인 로딩 엔진
+  discovery.ts        # 플러그인 자동 발견
+  registry.ts         # 플러그인 레지스트리
+  runtime.ts          # 플러그인 런타임 상태
+  runtime/            # 런타임 구현
+  manifest.ts         # 플러그인 매니페스트 파싱
+  config-state.ts     # 플러그인 활성화/비활성화 상태
+  hooks.ts            # 플러그인 훅 시스템
+  services.ts         # 플러그인 서비스 관리
+
+src/plugin-sdk/       # 공개 API (플러그인 개발자용)
+  index.ts            # 모든 public export (391 LOC)
+
+extensions/           # 확장 플러그인 (35개)
+skills/               # 스킬 플러그인 (52개)
+```
+
+### 핵심 파일 역할
+
+| 파일                    | 역할                                                        |
+| ----------------------- | ----------------------------------------------------------- |
+| `loader.ts`             | `jiti`를 사용한 동적 모듈 로딩. TypeScript 소스를 직접 실행 |
+| `discovery.ts`          | 파일 시스템에서 플러그인을 자동으로 검색                    |
+| `registry.ts`           | 로드된 플러그인을 등록하고 조회하는 레지스트리              |
+| `runtime.ts`            | 전역 플러그인 레지스트리 상태 관리                          |
+| `config-state.ts`       | 설정에 따른 플러그인 활성화/비활성화 결정                   |
+| `manifest.ts`           | `package.json`에서 플러그인 메타데이터 읽기                 |
+| `schema-validator.ts`   | 플러그인 설정 JSON Schema 검증                              |
+| `http-registry.ts`      | 플러그인 HTTP 라우트 등록                                   |
+| `hook-runner-global.ts` | 글로벌 훅 실행기                                            |
+
+## 플러그인 로딩 과정
+
+플러그인은 `jiti`(Just-In-Time Import)를 사용하여 동적으로 로드됩니다.
+TypeScript 파일을 별도 빌드 없이 직접 실행할 수 있습니다.
+
+```typescript
+// loader.ts에서 plugin-sdk 경로 해석
+const resolvePluginSdkAlias = (): string | null => {
+  // src/plugin-sdk/index.ts (개발 모드)
+  // dist/plugin-sdk/index.js (프로덕션 모드)
+  // 환경에 따라 적절한 경로를 자동 선택
+};
+```
+
+로딩 순서는 다음과 같습니다.
+
+1. `discoverOpenClawPlugins()`로 설치된 플러그인을 검색합니다
+2. `loadPluginManifestRegistry()`로 각 플러그인의 매니페스트를 읽습니다
+3. `normalizePluginsConfig()`로 설정을 정규화합니다
+4. `resolveEnableState()`로 활성화할 플러그인을 결정합니다
+5. `createJiti()`로 TypeScript 런타임을 생성합니다
+6. 각 플러그인의 엔트리포인트를 import하여 실행합니다
+7. `createPluginRegistry()`로 레지스트리에 등록합니다
+8. `setActivePluginRegistry()`로 전역 상태를 업데이트합니다
+
+## 확장 모듈 유형
+
+<Tabs>
+  <Tab title="Channel 플러그인">
+    메시징 플랫폼 어댑터입니다. `ChannelPlugin` 인터페이스를 구현합니다.
+
+    대표 예시는 다음과 같습니다.
+
+    - `extensions/telegram/` -- Telegram 확장 기능
+    - `extensions/discord/` -- Discord 확장 기능
+    - `extensions/slack/` -- Slack 확장 기능
+    - `extensions/msteams/` -- Microsoft Teams
+    - `extensions/matrix/` -- Matrix 프로토콜
+    - `extensions/feishu/` -- 페이슈(Lark)
+    - `extensions/googlechat/` -- Google Chat
+    - `extensions/mattermost/` -- Mattermost
+    - `extensions/line/` -- LINE
+    - `extensions/irc/` -- IRC
+    - `extensions/zalo/` -- Zalo
+    - `extensions/nostr/` -- Nostr
+    - `extensions/twitch/` -- Twitch
+
+    채널 플러그인은 메시지 수신, 발신, 스트리밍, 그룹 관리 등의 어댑터를 제공합니다.
+
+  </Tab>
+  <Tab title="Auth 플러그인">
+    AI 프로바이더 인증을 처리하는 플러그인입니다.
+
+    대표 예시는 다음과 같습니다.
+
+    - `extensions/google-antigravity-auth/` -- Google AI 인증
+    - `extensions/google-gemini-cli-auth/` -- Gemini CLI 인증
+    - `extensions/minimax-portal-auth/` -- MiniMax 포털 인증
+    - `extensions/qwen-portal-auth/` -- Qwen 포털 인증
+    - `extensions/copilot-proxy/` -- GitHub Copilot 프록시
+
+    이 플러그인들은 `ProviderAuthContext`와 `ProviderAuthResult` 타입을 사용하여
+    API 키 취득 및 갱신을 자동화합니다.
+
+  </Tab>
+  <Tab title="Core 플러그인">
+    핵심 기능을 확장하는 플러그인입니다.
+
+    대표 예시는 다음과 같습니다.
+
+    - `extensions/memory-core/` -- 핵심 메모리 시스템
+    - `extensions/memory-lancedb/` -- LanceDB 벡터 메모리
+    - `extensions/lobster/` -- Lobster 도구
+    - `extensions/llm-task/` -- LLM 작업 위임 도구
+    - `extensions/diagnostics-otel/` -- OpenTelemetry 진단
+    - `extensions/voice-call/` -- 음성 통화
+    - `extensions/talk-voice/` -- 음성 대화
+    - `extensions/device-pair/` -- 디바이스 페어링
+    - `extensions/phone-control/` -- 전화 제어
+
+    Core 플러그인은 `OpenClawPluginApi`를 통해 Gateway, 에이전트, 세션 등
+    내부 시스템에 접근할 수 있습니다.
+
+  </Tab>
+</Tabs>
+
+## Plugin SDK
+
+`src/plugin-sdk/index.ts`는 플러그인 개발자를 위한 공개 API입니다.
+채널 어댑터 타입, Gateway 핸들러 타입, 설정 타입 등을 export합니다.
+
+주요 export 항목은 다음과 같습니다.
+
+```typescript
+// 채널 관련 타입
+export type { ChannelPlugin, ChannelCapabilities, ChannelMessagingAdapter };
+
+// 플러그인 API
+export type { OpenClawPluginApi, OpenClawPluginService };
+
+// Gateway 핸들러
+export type { GatewayRequestHandler, GatewayRequestHandlerOptions };
+
+// 플러그인 런타임
+export type { PluginRuntime, RuntimeLogger };
+
+// 설정
+export type { OpenClawConfig };
+
+// 유틸리티
+export { normalizePluginHttpPath, registerPluginHttpRoute };
+export { emptyPluginConfigSchema };
+```
+
+## 플러그인 생명주기
+
+```
+발견(Discovery)
+    |
+    v
+매니페스트 읽기(Manifest)
+    |
+    v
+활성화 결정(Enable State)
+    |
+    v
+모듈 로딩(jiti Import)
+    |
+    v
+레지스트리 등록(Registry)
+    |
+    v
+서비스 시작(Services Start)
+    |
+    v
+런타임 실행(Runtime Active)
+    |
+    v
+설정 리로드 시 재평가
+```
+
+플러그인이 비활성화되면 레지스트리에서 제거되고 관련 서비스가 중지됩니다.
+설정 파일에서 플러그인을 활성화/비활성화하면 동적으로 반영됩니다.
+
+## 플러그인 개발 가이드
+
+### 프로젝트 구조
+
+새 플러그인을 만들려면 `extensions/` 디렉토리에 패키지를 생성합니다.
+
+```
+extensions/my-plugin/
+  package.json        # 플러그인 메타데이터
+  src/
+    index.ts          # 엔트리포인트
+```
+
+### package.json 설정
+
+```json
+{
+  "name": "@openclaw/plugin-my-plugin",
+  "version": "1.0.0",
+  "openclaw": {
+    "type": "plugin"
+  },
+  "main": "src/index.ts",
+  "dependencies": {
+    "@openclaw/plugin-sdk": "workspace:*"
+  }
+}
+```
+
+`openclaw.type` 필드가 있어야 플러그인으로 인식됩니다.
+`@openclaw/plugin-sdk`를 의존성으로 추가하면 모든 공개 API를 사용할 수 있습니다.
+
+### 엔트리포인트 작성
+
+```typescript
+// src/index.ts
+import type { OpenClawPluginApi, OpenClawPluginService } from "@openclaw/plugin-sdk";
+
+const plugin: OpenClawPluginService = {
+  name: "my-plugin",
+  version: "1.0.0",
+
+  async onLoad(api: OpenClawPluginApi) {
+    // 플러그인 초기화
+    // Gateway 핸들러 등록, 훅 설정 등
+  },
+
+  async onUnload() {
+    // 정리 작업
+  },
+};
+
+export default plugin;
+```
+
+### 채널 플러그인 예시
+
+채널 플러그인을 만들려면 `ChannelPlugin` 인터페이스를 구현합니다.
+
+```typescript
+import type { ChannelPlugin, ChannelCapabilities } from "@openclaw/plugin-sdk";
+
+const channelPlugin: ChannelPlugin = {
+  id: "my-channel",
+  capabilities: {
+    text: true,
+    images: true,
+    audio: false,
+    video: false,
+  },
+
+  messaging: {
+    async send(ctx, message) {
+      // 메시지 발신 구현
+    },
+    async onMessage(ctx, handler) {
+      // 메시지 수신 리스너 등록
+    },
+  },
+};
+```
+
+## 플러그인 설정
+
+플러그인은 자체 설정 스키마를 가질 수 있습니다.
+
+```typescript
+import { emptyPluginConfigSchema } from "@openclaw/plugin-sdk";
+
+// 기본 빈 스키마
+const configSchema = emptyPluginConfigSchema;
+
+// 또는 커스텀 JSON Schema
+const configSchema = {
+  type: "object",
+  properties: {
+    apiKey: { type: "string" },
+    enabled: { type: "boolean", default: true },
+  },
+  required: ["apiKey"],
+};
+```
+
+`schema-validator.ts`가 JSON Schema를 기반으로 플러그인 설정을 검증합니다.
+
+## 스킬과 플러그인의 차이
+
+| 항목 | 플러그인                                 | 스킬                                   |
+| ---- | ---------------------------------------- | -------------------------------------- |
+| 위치 | `extensions/`                            | `skills/`                              |
+| 역할 | 시스템 기능 확장 (채널, 인증, 메모리 등) | 에이전트 능력 확장 (GitHub, Notion 등) |
+| 로딩 | Gateway 시작 시 자동                     | 에이전트 세션에서 동적 활성화          |
+| API  | Plugin SDK 전체                          | 스킬 프레임워크 API                    |
+| 개수 | 35개                                     | 52개                                   |
+
+스킬은 에이전트에 특화된 능력을 부여하는 경량 모듈이고,
+플러그인은 OpenClaw 시스템 자체를 확장하는 더 강력한 모듈입니다.
+
+## 핵심 요약
+
+Plugin 시스템은 OpenClaw의 확장성을 보장합니다.
+`jiti`를 사용한 동적 TypeScript 로딩으로 빌드 없이 플러그인을 실행하고,
+Plugin SDK로 타입 안전한 API를 제공합니다.
+35개의 확장 모듈과 52개의 스킬이 이미 생태계를 형성하고 있으며,
+새 플러그인 개발은 `package.json` 설정과 엔트리포인트 작성만으로 시작할 수 있습니다.

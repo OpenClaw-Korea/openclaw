@@ -1,0 +1,24 @@
+{
+  "name": "@openclaw/electron-node",
+  "version": "2026.2.10",
+  "private": true,
+  "description": "OpenClaw Node Lite — lightweight headless node for Windows/macOS",
+  "type": "module",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "tsc && electron dist/main/index.js",
+    "build": "tsc",
+    "build:mac": "tsc && electron-builder --mac",
+    "build:win": "tsc && electron-builder --win",
+    "build:all": "tsc && electron-builder --mac --win"
+  },
+  "dependencies": {
+    "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.14",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "typescript": "^5.9.0"
+  }
+}
