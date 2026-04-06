@@ -1,0 +1,185 @@
+---
+title: "Testing"
+description: "OpenClaw 프로젝트의 테스트 전략과 실행 방법. Vitest 기반 단위 테스트, E2E 테스트, 커버리지 설정을 안내합니다."
+---
+
+# Testing
+
+OpenClaw은 Vitest를 테스트 프레임워크로 사용하며, V8 기반 커버리지를 측정합니다.
+이 문서에서는 테스트 작성과 실행 방법을 안내합니다.
+
+## 테스트 프레임워크
+
+| 항목          | 설정                                          |
+| ------------- | --------------------------------------------- |
+| 프레임워크    | Vitest                                        |
+| 커버리지 엔진 | V8                                            |
+| 커버리지 기준 | lines, branches, functions, statements 각 70% |
+
+## 테스트 실행 명령어
+
+### 기본 명령어
+
+```bash
+# 단위 테스트 실행
+pnpm test
+
+# 커버리지 포함 테스트
+pnpm test:coverage
+
+# Watch 모드 (파일 변경 시 자동 재실행)
+pnpm test:watch
+```
+
+### 라이브 테스트
+
+실제 외부 서비스에 연결하는 라이브 테스트입니다. 환경 변수 설정이 필요합니다.
+
+```bash
+CLAWDBOT_LIVE_TEST=1 pnpm test:live
+```
+
+### Docker 기반 테스트
+
+Docker 환경에서 실행하는 통합 테스트입니다.
+
+```bash
+# 라이브 모델 테스트
+pnpm test:docker:live-models
+
+# 라이브 게이트웨이 테스트
+pnpm test:docker:live-gateway
+```
+
+<Warning>
+  라이브 테스트와 Docker 테스트는 실제 API를 호출합니다. 비용이 발생할 수 있으므로 필요한 경우에만
+  실행하세요.
+</Warning>
+
+## 테스트 파일 구조
+
+### 파일 네이밍
+
+| 테스트 유형   | 파일 패턴       | 설명                             |
+| ------------- | --------------- | -------------------------------- |
+| 단위 테스트   | `*.test.ts`     | 소스 파일과 같은 디렉토리에 위치 |
+| E2E 테스트    | `*.e2e.test.ts` | End-to-End 테스트                |
+| 라이브 테스트 | 별도 config     | 외부 서비스 연동 테스트          |
+
+단위 테스트는 소스 파일과 같은 디렉토리에 함께 배치(colocate)합니다.
+
+```
+src/
+  utils/
+    parser.ts
+    parser.test.ts      # parser.ts의 단위 테스트
+  channels/
+    websocket.ts
+    websocket.test.ts   # websocket.ts의 단위 테스트
+    websocket.e2e.test.ts  # E2E 테스트
+```
+
+### 설정 파일
+
+프로젝트 루트에 테스트 유형별 설정 파일이 있습니다.
+
+| 파일                    | 용도                  |
+| ----------------------- | --------------------- |
+| `vitest.config.ts`      | 기본 단위 테스트 설정 |
+| `vitest.e2e.config.ts`  | E2E 테스트 설정       |
+| `vitest.live.config.ts` | 라이브 테스트 설정    |
+
+## 테스트 작성 예시
+
+### 기본 단위 테스트
+
+```typescript
+import { describe, it, expect } from "vitest";
+import { parseConfig } from "./config";
+
+describe("parseConfig", () => {
+  it("should parse valid config", () => {
+    const raw = { port: 3000, host: "localhost" };
+    const result = parseConfig(raw);
+
+    expect(result.port).toBe(3000);
+    expect(result.host).toBe("localhost");
+  });
+
+  it("should throw on invalid port", () => {
+    const raw = { port: -1, host: "localhost" };
+
+    expect(() => parseConfig(raw)).toThrow();
+  });
+});
+```
+
+### Mock을 사용한 테스트
+
+의존성 주입 패턴 덕분에 mock 객체를 쉽게 주입할 수 있습니다.
+
+```typescript
+import { describe, it, expect, vi } from "vitest";
+import { createApp } from "./app";
+
+describe("createApp", () => {
+  it("should log startup message", async () => {
+    const mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+    };
+
+    const deps = {
+      logger: mockLogger,
+      config: { port: 3000, host: "localhost" },
+      httpClient: createMockHttpClient(),
+    };
+
+    await createApp(deps);
+
+    expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining("starting"));
+  });
+});
+```
+
+### 비동기 스트리밍 테스트
+
+```typescript
+import { describe, it, expect } from "vitest";
+import { createMockStream } from "../test-utils";
+
+describe("StreamProcessor", () => {
+  it("should process all chunks", async () => {
+    const chunks = ["hello", " ", "world"];
+    const stream = createMockStream(chunks);
+    const results: string[] = [];
+
+    for await (const chunk of stream) {
+      results.push(chunk);
+    }
+
+    expect(results).toEqual(chunks);
+  });
+});
+```
+
+## 테스트 작성 원칙
+
+### 중요한 것을 테스트하세요
+
+모든 줄을 커버하는 것보다, 비즈니스 로직과 엣지 케이스에 집중하세요.
+
+### 테스트를 작고 집중적으로 유지하세요
+
+하나의 `it` 블록에서 하나의 동작만 검증합니다.
+
+### 외부 서비스는 Mock 처리하세요
+
+단위 테스트에서 실제 API를 호출하면 느리고 불안정해집니다. 의존성 주입을 활용해 mock 객체를 사용하세요.
+
+### 테스트도 코드입니다
+
+테스트 코드에도 가독성과 유지보수성이 중요합니다. 중복을 줄이고 헬퍼 함수를 활용하세요.
+
+<Tip>PR을 제출하기 전에 반드시 `pnpm test`를 실행하세요. CI에서 실패하면 머지가 차단됩니다.</Tip>

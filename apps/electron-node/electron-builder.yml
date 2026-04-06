@@ -1,0 +1,26 @@
+appId: ai.openclaw.node-lite
+productName: OpenClaw Node
+directories:
+  output: dist-electron
+  buildResources: assets
+
+files:
+  - dist/**/*
+  - assets/**/*
+  - "!node_modules/**/{test,tests,__tests__}/**"
+
+mac:
+  category: public.app-category.utilities
+  icon: assets/icon.png
+  target:
+    - dmg
+
+win:
+  icon: assets/icon.ico
+  target:
+    - nsis
+
+nsis:
+  oneClick: true
+  perMachine: false
+  allowToChangeInstallationDirectory: false

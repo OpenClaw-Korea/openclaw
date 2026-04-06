@@ -1,0 +1,129 @@
+---
+title: "Contributing"
+description: "OpenClaw 프로젝트에 기여하는 방법. PR 작성 규칙, 커밋 컨벤션, 릴리스 채널, 도움받을 수 있는 곳을 안내합니다."
+---
+
+# Contributing
+
+OpenClaw에 기여해 주셔서 감사합니다. 이 문서에서는 기여 방법과 프로세스를 안내합니다.
+
+## 기여 방법
+
+기여 유형에 따라 진행 방식이 다릅니다.
+
+| 유형                  | 절차                                  |
+| --------------------- | ------------------------------------- |
+| 버그 수정 / 작은 개선 | 바로 PR을 생성합니다                  |
+| 새로운 기능           | GitHub Discussion에서 먼저 논의합니다 |
+
+새로운 기능은 구현 방향이 프로젝트 로드맵과 맞는지 먼저 확인하는 것이 중요합니다. Discussion에서 합의된 후 PR을 생성하면 리뷰 과정이 훨씬 원활해집니다.
+
+## PR 체크리스트
+
+PR을 제출하기 전에 아래 사항을 확인하세요.
+
+### 로컬에서 검증
+
+반드시 아래 명령어를 순서대로 실행하고 모두 통과하는지 확인합니다.
+
+```bash
+pnpm build && pnpm check && pnpm test
+```
+
+### PR 작성 원칙
+
+- **하나의 PR에 하나의 주제**: 관련 없는 변경을 묶지 마세요.
+- **변경 이유 설명**: 무엇을 바꿨는지보다 왜 바꿨는지를 PR 설명에 적으세요.
+- **작은 PR 선호**: 리뷰하기 쉬운 크기로 나눠서 제출하세요.
+
+## 커밋 컨벤션
+
+커밋 메시지는 간결하고 행동 지향적으로 작성합니다.
+
+### 형식
+
+```
+영역: 변경 내용을 간결하게 설명
+```
+
+### 예시
+
+```
+CLI: add verbose flag to send
+gateway: fix WebSocket reconnection timeout
+config: validate port range in schema
+docs: update plugin development guide
+```
+
+### committer 스크립트
+
+프로젝트에 포함된 `scripts/committer`를 사용하면 일관된 커밋 메시지를 작성할 수 있습니다.
+
+```bash
+scripts/committer
+```
+
+## AI 활용 기여
+
+AI 도구를 활용한 PR도 환영합니다. 다만 아래 사항을 지켜주세요.
+
+- PR 설명에 **AI 도구를 사용했음을 명시**하세요.
+- 어떤 수준의 **테스트를 수행했는지 기록**하세요.
+- AI가 생성한 코드라도 **직접 리뷰하고 이해한 후** 제출하세요.
+
+<Note>
+  AI가 생성한 코드도 기여자의 책임입니다. 동작을 이해하고, 테스트를 통과하는지 확인한 후 제출하세요.
+</Note>
+
+## 릴리스 채널
+
+OpenClaw은 세 가지 릴리스 채널을 운영합니다.
+
+| 채널   | 버전 형식          | 설명                   |
+| ------ | ------------------ | ---------------------- |
+| stable | `vYYYY.M.D`        | 프로덕션용 안정 릴리스 |
+| beta   | `vYYYY.M.D-beta.N` | 다음 안정 릴리스 후보  |
+| dev    | `main` 브랜치      | 최신 개발 버전         |
+
+stable 릴리스는 충분한 beta 테스트를 거친 후 배포됩니다.
+
+## 현재 프로젝트 포커스
+
+OpenClaw 팀이 현재 집중하고 있는 영역입니다. 이 영역의 기여가 특히 환영됩니다.
+
+- **안정성(Stability)**: 에러 핸들링, 엣지 케이스 처리
+- **사용자 경험(UX)**: CLI 인터랙션, 에러 메시지 개선
+- **스킬(ClawHub)**: 새로운 스킬 개발, 기존 스킬 개선
+- **성능(Performance)**: 응답 속도, 메모리 사용 최적화
+
+## 도움이 필요하세요?
+
+<CardGroup cols={3}>
+
+<Card title="Discord" icon="discord" href="https://discord.gg/openclaw">
+  `#setup-help` 채널에서 설정 관련 도움을 받을 수 있습니다.
+</Card>
+
+<Card title="GitHub Issues" icon="github" href="https://github.com/openclaw/openclaw/issues">
+  버그 리포트나 기능 요청은 Issues에서 관리합니다.
+</Card>
+
+<Card
+  title="GitHub Discussions"
+  icon="comments"
+  href="https://github.com/openclaw/openclaw/discussions"
+>
+  새 기능 제안이나 일반적인 논의는 Discussions를 활용하세요.
+</Card>
+
+</CardGroup>
+
+## 보안 취약점 신고
+
+보안 취약점을 발견하셨다면 공개 이슈 대신 아래 이메일로 직접 신고해 주세요.
+
+```
+security@openclaw.ai
+```
+
+보안 취약점은 수정이 완료된 후 공개됩니다. 신고자에게는 수정 진행 상황을 안내드립니다.

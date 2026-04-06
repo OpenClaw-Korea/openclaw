@@ -1,0 +1,107 @@
+---
+title: "OpenClaw 입문 가이드"
+description: "주니어 개발자를 위한 OpenClaw 프로젝트 소개 - 멀티채널 AI 게이트웨이 플랫폼의 핵심 개념과 시작 방법을 안내합니다."
+---
+
+# OpenClaw 입문 가이드
+
+## OpenClaw이란?
+
+OpenClaw은 **멀티채널 AI 게이트웨이 플랫폼**입니다. 다양한 메시징 채널(WhatsApp, Telegram, Discord, iMessage, Slack, Signal 등)을 AI 모델(Claude, OpenAI 등)에 연결하여, 하나의 개인 AI 비서를 여러 채널에서 동시에 사용할 수 있게 해줍니다.
+
+TypeScript/Node.js 기반의 모노레포 프로젝트로, pnpm 워크스페이스를 활용하여 구성되어 있습니다.
+
+## 핵심 기능
+
+<CardGroup cols={2}>
+  <Card title="15+ 메시징 채널" icon="messages">
+    WhatsApp, Telegram, Discord, iMessage, Slack, Signal, LINE, IRC, Matrix, Mattermost, MS Teams,
+    Nostr, Google Chat, Feishu, Twitch 등 15개 이상의 메시징 채널을 지원합니다.
+  </Card>
+  <Card title="플러그형 AI 프로바이더" icon="brain">
+    Claude, OpenAI, Google Gemini, Bedrock, Ollama 등 다양한 AI 프로바이더를 설정 하나로 교체할 수
+    있습니다. Auth Profile 기반의 인증 관리와 모델 fallback을 지원합니다.
+  </Card>
+  <Card title="Skills와 Extensions" icon="puzzle-piece">
+    52개의 내장 스킬(GitHub, Spotify, Obsidian, 1Password 등)과 35개의 확장 모듈(음성통화, 메모리,
+    LLM 태스크 등)을 통해 AI 비서의 기능을 무한히 확장할 수 있습니다.
+  </Card>
+  <Card title="네이티브 앱 지원" icon="mobile">
+    macOS, iOS, Android 네이티브 앱을 통해 데스크톱과 모바일에서 직접 AI 비서에 접근할 수 있습니다.
+    Gateway 서버와 WebSocket으로 실시간 통신합니다.
+  </Card>
+</CardGroup>
+
+## 이 가이드의 대상
+
+이 가이드는 **OpenClaw 프로젝트에 처음 참여하는 주니어 개발자**를 위해 작성되었습니다. 다음과 같은 분들에게 적합합니다.
+
+- OpenClaw 프로젝트의 전체 구조를 파악하고 싶은 신규 기여자
+- TypeScript 모노레포 프로젝트의 실제 사례를 학습하고 싶은 개발자
+- 메시징 채널과 AI 모델을 연동하는 아키텍처에 관심 있는 개발자
+
+## 학습 내용
+
+이 가이드 시리즈를 통해 다음 내용을 학습합니다.
+
+<CardGroup cols={3}>
+  <Card title="프로젝트 소개" icon="book-open" href="/opus/introduction">
+    OpenClaw의 핵심 개념, 기능, 기술 스택을 이해합니다.
+  </Card>
+  <Card title="아키텍처 개요" icon="sitemap" href="/opus/architecture">
+    시스템의 계층 구조, 요청 흐름, 핵심 디자인 패턴을 파악합니다.
+  </Card>
+  <Card title="프로젝트 구조" icon="folder-tree" href="/opus/project-structure">
+    모노레포의 디렉토리 구성과 각 모듈의 역할을 살펴봅니다.
+  </Card>
+</CardGroup>
+
+## 사전 준비사항
+
+OpenClaw 프로젝트를 로컬에서 실행하고 개발하려면 다음 환경이 필요합니다.
+
+| 항목           | 요구사항  | 설명                                    |
+| -------------- | --------- | --------------------------------------- |
+| **Node.js**    | v22 이상  | ESM 모듈과 최신 API를 사용합니다        |
+| **pnpm**       | 최신 버전 | 모노레포 워크스페이스 관리에 사용됩니다 |
+| **TypeScript** | 5.9+      | strict 모드와 ESM을 기본으로 사용합니다 |
+| **Git**        | 최신 버전 | 소스 코드 관리 및 협업에 필요합니다     |
+
+### 기본 지식
+
+다음 기술에 대한 기본적인 이해가 있으면 학습이 수월합니다.
+
+- **TypeScript**: 타입 시스템, ESM `import`/`export`, `async`/`await` 등 기본 문법
+- **Node.js**: 이벤트 루프, 모듈 시스템, 파일 시스템 API
+- **Express**: HTTP 서버, 미들웨어, 라우팅 개념
+- **CLI 도구**: Commander.js 기반 명령행 인터페이스 패턴
+
+### 빠른 시작
+
+프로젝트를 클론하고 의존성을 설치하는 기본 과정입니다.
+
+```bash
+git clone https://github.com/openclaw/openclaw.git
+cd openclaw
+pnpm install
+pnpm build
+```
+
+빌드 도구로 `tsdown`을 사용하며, 테스트 프레임워크는 `vitest`입니다. 엔트리 포인트는 `openclaw.mjs` 파일이며, 여기서 `src/entry.ts`를 거쳐 CLI 프로그램이 시작됩니다.
+
+## 기술 스택 요약
+
+| 분류            | 기술                              |
+| --------------- | --------------------------------- |
+| 언어            | TypeScript 5.9 (ESM, strict mode) |
+| 런타임          | Node.js 22+                       |
+| 패키지 매니저   | pnpm (workspaces)                 |
+| 빌드            | tsdown                            |
+| HTTP 서버       | Express 5                         |
+| CLI 프레임워크  | Commander.js                      |
+| 스키마 검증     | Zod 4                             |
+| 테스트          | Vitest                            |
+| E2E 테스트      | Playwright                        |
+| 플러그인 런타임 | jiti (동적 TypeScript 로딩)       |
+
+다음 문서인 **아키텍처 개요**에서 OpenClaw의 시스템 설계와 요청 처리 흐름을 자세히 살펴보겠습니다.
